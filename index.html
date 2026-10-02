@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contratos sem Evidências</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232a78d6'/><path d='M9 16.5l4.5 4.5L23 11' stroke='white' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{
+  --bg:#f3f4f6;--card:#fcfcfb;--tx:#0b0b0b;--tx2:#52514e;--mut:#7a7975;--bd:#e2e1dc;--grid:#ecebe6;
+  --ac:#2a78d6;--bar:#2a78d6;--track:#e7e6e1;
+  --ok:#0f7a3d;--okbg:#e3f5ea;--no:#b42318;--nobg:#fdecea;--wbg:#fff6e0;--wtx:#7a5200;--wbd:#f1d38a;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121211;--card:#1a1a19;--tx:#ffffff;--tx2:#c3c2b7;--mut:#8d8c85;--bd:#2f2f2c;--grid:#262624;
+  --ac:#3987e5;--bar:#3987e5;--track:#2b2b28;
+  --ok:#4cc27a;--okbg:#173524;--no:#f07068;--nobg:#3a1b1a;--wbg:#3a2f12;--wtx:#f3d48a;--wbd:#6b5520;color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#121211;--card:#1a1a19;--tx:#ffffff;--tx2:#c3c2b7;--mut:#8d8c85;--bd:#2f2f2c;--grid:#262624;
+  --ac:#3987e5;--bar:#3987e5;--track:#2b2b28;
+  --ok:#4cc27a;--okbg:#173524;--no:#f07068;--nobg:#3a1b1a;--wbg:#3a2f12;--wtx:#f3d48a;--wbd:#6b5520;color-scheme:dark;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 16px 56px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+h1{font-size:21px;margin:0}
+.sub{color:var(--tx2);margin:2px 0 0;font-size:13px}
+.memo{font-size:12px;color:var(--tx2);text-align:right}
+.memo b{color:var(--tx)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px}
+.card h2{font-size:14px;margin:0 0 4px}
+.card p{margin:0 0 10px;color:var(--tx2);font-size:12.5px}
+input[type=file]{width:100%;font-size:12.5px;color:var(--tx2)}
+.st{font-size:12px;margin-top:8px;color:var(--mut);min-height:16px}
+.st.ok{color:var(--ok)}
+button{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:600;cursor:pointer;font-size:13.5px}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.sec{background:transparent;color:var(--ac);border:1px solid var(--ac)}
+button.ghost{background:transparent;color:var(--tx2);border:1px solid var(--bd);font-weight:500}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0}
+label.chk{font-size:12.5px;color:var(--tx2);display:flex;gap:6px;align-items:center}
+details.up>summary{cursor:pointer;font-weight:600;font-size:14px;margin-bottom:10px;list-style:none}
+details.up>summary::before{content:"▸ ";color:var(--mut)}
+details.up[open]>summary::before{content:"▾ "}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--bd);margin:18px 0 14px}
+.tab{background:none;color:var(--tx2);border:0;border-bottom:2px solid transparent;border-radius:0;padding:9px 14px;font-weight:600}
+.tab.on{color:var(--tx);border-bottom-color:var(--ac)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px 14px}
+.kpi b{display:block;font-size:26px;font-weight:650;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.kpi span{color:var(--tx2);font-size:12px}
+.kpi .no{color:var(--no)} .kpi .ok{color:var(--ok)}
+.warn{background:var(--wbg);color:var(--wtx);border:1px solid var(--wbd);border-radius:8px;padding:10px 12px;font-size:13px;margin:0 0 12px}
+.two{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:12px}
+@media (max-width:860px){.two{grid-template-columns:1fr}}
+.chart-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px}
+.chart-h h3{margin:0;font-size:14px}
+.chart-h small{color:var(--mut);font-size:12px}
+.hb{display:grid;grid-template-columns:92px 1fr 92px;gap:10px;align-items:center;padding:5px 4px;border-radius:6px;cursor:pointer;position:relative}
+.hb:hover,.hb.sel{background:color-mix(in srgb,var(--ac) 9%,transparent)}
+.hb .lb{font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.hb .lb small{display:block;font-weight:400;color:var(--mut);font-size:11px}
+.trk{height:14px;background:var(--track);border-radius:4px;overflow:hidden;display:flex}
+.trk i{display:block;height:100%;background:var(--bar);border-radius:0 4px 4px 0}
+.hb .vl{font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums;color:var(--tx2)}
+.hb .vl b{color:var(--tx)}
+.tip{position:fixed;pointer-events:none;background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 6px 18px rgba(0,0,0,.15);z-index:20;display:none;min-width:170px}
+.tip div{display:flex;justify-content:space-between;gap:14px}
+.tip span{color:var(--tx2)}
+.tbl{overflow:auto;max-height:62vh;border:1px solid var(--bd);border-radius:12px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:7px 9px;border-bottom:1px solid var(--grid);text-align:left;white-space:nowrap}
+th{position:sticky;top:0;background:var(--card);z-index:1;color:var(--tx2);font-weight:600;font-size:12px}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tr.click{cursor:pointer} tr.click:hover td{background:color-mix(in srgb,var(--ac) 7%,transparent)}
+.tag{display:inline-block;padding:1px 8px;border-radius:10px;font-weight:600;font-size:11.5px}
+.tag.s{background:var(--okbg);color:var(--ok)}
+.tag.n{background:var(--nobg);color:var(--no)}
+select,input[type=search]{padding:7px 9px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx);font-size:13px}
+.hide{display:none!important}
+.empty{padding:40px 16px;text-align:center;color:var(--tx2)}
+.chip{display:inline-flex;gap:6px;align-items:center;background:color-mix(in srgb,var(--ac) 12%,transparent);color:var(--ac);border-radius:14px;padding:3px 10px;font-size:12px;font-weight:600}
+.chip button{background:none;color:inherit;padding:0 2px;font-size:14px;border:0}
+.hist td{font-size:12px}
+.sapname{border:1px dashed transparent;border-radius:4px;padding:1px 3px;min-width:60px;display:inline-block;color:var(--tx2)}
+.sapname:hover,.sapname:focus{border-color:var(--bd);outline:none;color:var(--tx)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Contratos sem evidências</h1>
+      <p class="sub">Cruza o grupo "Evidências BTP – Aprovações" do WhatsApp com a Redução BOM e mostra as pendências por SAP.</p>
+    </div>
+    <div class="memo" id="memo">Nenhum processamento salvo neste navegador.</div>
+  </header>
+
+  <details class="up" id="upBox" open>
+    <summary>Carregar arquivos</summary>
+    <div class="grid">
+      <div class="card">
+        <h2>1. Conversa do WhatsApp</h2>
+        <p>O .zip exportado do grupo (ou o _chat.txt).</p>
+        <input type="file" id="fChat" accept=".zip,.txt">
+        <div class="st" id="sChat"></div>
+      </div>
+      <div class="card">
+        <h2>2. Redução BOM</h2>
+        <p>Planilha com a coluna <code>wo</code>, <code>fornecedor</code> (SAP) e, se houver, <code>contrato</code>.</p>
+        <input type="file" id="fBom" accept=".xlsx,.xls,.csv">
+        <div class="st" id="sBom"></div>
+      </div>
+      <div class="card">
+        <h2>3. De-para WO × Contrato <small style="font-weight:400;color:var(--mut)">(opcional, fica salvo)</small></h2>
+        <p>Planilha com uma coluna de WO e uma de contrato (ex.: export Connect/OFS). Usada quando o BOM não traz o contrato.</p>
+        <input type="file" id="fMap" accept=".xlsx,.xls,.csv">
+        <div class="st" id="sMap"></div>
+      </div>
+    </div>
+    <div class="bar">
+      <button id="btnRun" disabled>Cruzar e baixar Excel</button>
+      <label class="chk"><input type="checkbox" id="chkLoose" checked> Aceitar contrato/WO citado sem a palavra "Contrato"</label>
+      <label class="chk"><input type="checkbox" id="chkAuto" checked> Baixar Excel automaticamente</label>
+    </div>
+  </details>
+
+  <div id="out" class="hide">
+    <div class="tabs">
+      <button class="tab on" data-t="dash">Painel por SAP</button>
+      <button class="tab" data-t="det">Detalhe</button>
+      <button class="tab" data-t="hist">Histórico</button>
+    </div>
+
+    <section id="t-dash">
+      <div id="warns"></div>
+      <div class="kpis" id="kpis"></div>
+      <div class="two">
+        <div class="card">
+          <div class="chart-h"><h3>WOs sem evidência por SAP</h3><small>clique numa barra para filtrar</small></div>
+          <div id="chart"></div>
+        </div>
+        <div class="card">
+          <div class="chart-h"><h3 id="tecTitle">Técnicos com mais WOs sem evidência</h3><small id="tecSub">todos os SAPs</small></div>
+          <div id="tecs"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px;padding:0">
+        <div class="tbl" style="border:0;max-height:none">
+          <table id="sapTable"></table>
+        </div>
+      </div>
+    </section>
+
+    <section id="t-det" class="hide">
+      <div class="bar" style="margin-top:0">
+        <select id="flt"><option value="">Todas</option><option value="NÃO" selected>Sem evidência</option><option value="SIM">Com evidência</option></select>
+        <select id="fSap"><option value="">Todos os SAPs</option></select>
+        <input type="search" id="q" placeholder="Buscar WO, contrato, técnico, material…" style="flex:1;min-width:200px">
+        <button class="ghost" id="btnDl">Baixar Excel</button>
+      </div>
+      <div class="tbl"><table id="tb"></table></div>
+    </section>
+
+    <section id="t-hist" class="hide">
+      <div class="card" style="padding:0"><div class="tbl" style="border:0"><table id="histT" class="hist"></table></div></div>
+      <div class="bar"><button class="ghost" id="btnClear">Apagar dados salvos neste navegador</button></div>
+    </section>
+  </div>
+  <div class="empty" id="empty">Carregue o .zip do WhatsApp e a Redução BOM para começar.</div>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+// ---------- memória (localStorage, só neste navegador) ----------
+const K={last:'cse:last',hist:'cse:hist',map:'cse:map',names:'cse:names'};
+const mem={
+  get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}},
+  del(k){try{localStorage.removeItem(k);}catch(e){}}
+};
+
+let chatText=null,bomRows=null,bomHeaders=null,bomSheetName='Resultado',mapRows=null,result=null,selSap='';
+const $=id=>document.getElementById(id);
+const norm=s=>String(s??'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
+const digits=s=>String(s??'').replace(/\D/g,'');
+const stripZeros=s=>s.replace(/^0+/,'')||'0';
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=n=>Number(n).toLocaleString('pt-BR');
+const pct=(a,b)=>b?Math.round(a/b*100)+'%':'–';
+
+function findCol(headers,tests){for(const t of tests){const i=headers.findIndex(h=>t(norm(h)));if(i>=0)return i;}return -1;}
+const isWoCol=h=>h==='wo'||h==='os'||h==='numero os'||h==='n os'||h==='w.o'||h==='w.o.'||h.includes('numero da wo')||h==='n wo'||h==='os';
+const isContCol=h=>h.includes('contrato');
+const isSapCol=h=>h==='fornecedor'||h==='sap'||h==='fornecedorsap'||h==='cod fornecedor'||h==='codigo fornecedor'||h.startsWith('fornecedor');
+const isTecCol=h=>h==='tecnico'||h.startsWith('tecnico');
+
+// nomes dos SAPs (editáveis no painel, ficam salvos)
+const sapNames=Object.assign({'136710':'FFA Infraestrutura'},mem.get(K.names,{}));
+
+function readSheet(buf){
+  const wb=XLSX.read(buf,{type:'array'});
+  const name=wb.SheetNames[0];
+  const aoa=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:'',raw:false});
+  let h=0;while(h<aoa.length&&aoa[h].filter(v=>String(v).trim()!=='').length<2)h++;
+  const headers=(aoa[h]||[]).map(v=>String(v).trim());
+  const rows=aoa.slice(h+1).filter(r=>r.some(v=>String(v).trim()!==''));
+  return {name,headers,rows};
+}
+function woNum(v){const s=String(v??'').trim();if(!s)return '';const p=s.split('|');return stripZeros(digits(p[p.length-1]));}
+
+// ---------- uploads ----------
+$('fChat').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;$('sChat').className='st';$('sChat').textContent='Lendo…';
+  try{
+    if(/\.zip$/i.test(f.name)){
+      const z=await JSZip.loadAsync(f);
+      const txts=Object.values(z.files).filter(x=>!x.dir&&/\.txt$/i.test(x.name));
+      if(!txts.length)throw new Error('nenhum .txt dentro do zip');
+      txts.sort((a,b)=>(/_chat/i.test(b.name)?1:0)-(/_chat/i.test(a.name)?1:0));
+      chatText=await txts[0].async('string');
+    }else chatText=await f.text();
+    $('sChat').className='st ok';$('sChat').textContent=`✓ ${fmt(chatText.split('\n').length)} linhas carregadas`;
+  }catch(err){chatText=null;$('sChat').textContent='Erro: '+err.message;}
+  upd();
+};
+$('fBom').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{const s=readSheet(await f.arrayBuffer());bomHeaders=s.headers;bomRows=s.rows;bomSheetName=s.name;
+    const w=findCol(bomHeaders,[isWoCol]),c=findCol(bomHeaders,[isContCol]),sp=findCol(bomHeaders,[isSapCol]);
+    $('sBom').className='st ok';
+    $('sBom').textContent=`✓ ${bomRows.length} linhas · WO: ${w>=0?bomHeaders[w]:'—'} · SAP: ${sp>=0?bomHeaders[sp]:'—'} · Contrato: ${c>=0?bomHeaders[c]:'sem coluna'}`;
+  }catch(err){bomRows=null;$('sBom').className='st';$('sBom').textContent='Erro: '+err.message;}
+  upd();
+};
+$('fMap').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{const s=readSheet(await f.arrayBuffer());
+    const w=findCol(s.headers,[isWoCol]),c=findCol(s.headers,[isContCol]);
+    if(w<0||c<0)throw new Error('não encontrei colunas de WO e de contrato');
+    const saved=mem.get(K.map,{});let n=0;
+    for(const r of s.rows){const wn=woNum(r[w]),cn=digits(r[c]);if(wn&&cn){saved[wn]=stripZeros(cn);n++;}}
+    mapRows=saved;const ok=mem.set(K.map,saved);
+    $('sMap').className='st ok';$('sMap').textContent=`✓ ${fmt(n)} WOs lidas · ${fmt(Object.keys(saved).length)} no de-para${ok?' (salvo)':''}`;
+  }catch(err){$('sMap').className='st';$('sMap').textContent='Erro: '+err.message;}
+};
+function upd(){$('btnRun').disabled=!(chatText&&bomRows);}
+
+// ---------- WhatsApp ----------
+function parseChat(txt){
+  const msgRe=/^‎?\[(\d{2}\/\d{2}\/\d{4}),\s*(\d{2}:\d{2}:\d{2})\]\s*([^:]+?):\s?/;
+  const msgs=[];let cur=null;
+  for(const line of txt.split(/\r?\n/)){
+    const m=line.match(msgRe);
+    if(m){cur={data:m[1],hora:m[2],autor:m[3].replace(/^~\s*/,'').replace(/[‎⁨⁩]/g,'').trim(),txt:line.slice(m[0].length)};msgs.push(cur);}
+    else if(cur)cur.txt+='\n'+line;
+  }
+  const contr=new Map(),loose=new Map(),wos=new Map(),pairs={};
+  const add=(map,k,msg)=>{if(!k)return;const o=map.get(k);if(!o)map.set(k,{n:1,first:msg,last:msg});else{o.n++;o.last=msg;}};
+  const cRe=/contrato[s]?[\s*:#\-–.nº°]*?(\d{6,10})/gi;
+  const wRe=/(\d{4,6})\s*\|\s*(\d{6,12})/g;
+  const numRe=/(?<![\d|])(\d{6,10})(?![\d|])/g;
+  for(const msg of msgs){
+    const t=msg.txt.replace(/[⁨⁩‎]/g,'');let m;
+    cRe.lastIndex=0;while((m=cRe.exec(t)))add(contr,stripZeros(m[1]),msg);
+    wRe.lastIndex=0;while((m=wRe.exec(t)))add(wos,stripZeros(m[2]),msg);
+    numRe.lastIndex=0;while((m=numRe.exec(t)))add(loose,stripZeros(m[1]),msg);
+    // de-para do próprio grupo: mensagem com 1 contrato e 1 WO
+    const cs=[...t.matchAll(/contrato[s]?[\s*:#\-–.nº°]*?(\d{6,10})/gi)].map(x=>stripZeros(x[1]));
+    const ws=[...t.matchAll(/(\d{4,6})\s*\|\s*(\d{6,12})/g)].map(x=>stripZeros(x[2]));
+    if(new Set(cs).size===1&&new Set(ws).size===1)pairs[ws[0]]=cs[0];
+  }
+  const range=msgs.length?[msgs[0].data,msgs[msgs.length-1].data]:['',''];
+  return {contr,loose,wos,pairs,range,nMsgs:msgs.length};
+}
+
+// ---------- processamento ----------
+$('btnRun').onclick=()=>{
+  $('btnRun').disabled=true;$('btnRun').textContent='Processando…';
+  setTimeout(()=>{try{run();}catch(err){showWarn('Erro: '+esc(err.message));}
+    $('btnRun').disabled=false;$('btnRun').textContent='Cruzar e baixar Excel';},30);
+};
+
+function run(){
+  const idx=parseChat(chatText);
+  const useLoose=$('chkLoose').checked;
+  if(!mapRows)mapRows=mem.get(K.map,null);
+  const wCol=findCol(bomHeaders,[isWoCol]),cCol=findCol(bomHeaders,[isContCol]);
+  if(wCol<0&&cCol<0)throw new Error('A planilha não tem coluna de WO nem de contrato.');
+  const extra=['contratoUsado','Evidência WhatsApp','chaveEvidencia','dataEvidencia','autorEvidencia','qtdMencoes'];
+  const headers=[...bomHeaders,...extra];
+  const rows=[];let semContrato=0;
+  for(const r of bomRows){
+    const wn=wCol>=0?woNum(r[wCol]):'';
+    let cn=cCol>=0?stripZeros(digits(r[cCol])):'';if(cn==='0')cn='';
+    if(!cn&&mapRows&&wn)cn=mapRows[wn]||'';
+    if(!cn&&wn&&idx.pairs[wn])cn=idx.pairs[wn];
+    if(!cn)semContrato++;
+    let hit=null,chave='';
+    if(cn&&idx.contr.has(cn)){hit=idx.contr.get(cn);chave='Contrato '+cn+(wn&&idx.wos.has(wn)?' + WO':'');}
+    else if(wn&&idx.wos.has(wn)){hit=idx.wos.get(wn);chave='WO '+String(r[wCol]).trim();}
+    else if(useLoose&&cn&&idx.loose.has(cn)){hit=idx.loose.get(cn);chave='Contrato '+cn+' (sem rótulo)';}
+    else if(useLoose&&wn&&wn.length>=9&&idx.loose.has(wn)){hit=idx.loose.get(wn);chave='Nº WO '+wn+' (sem rótulo)';}
+    rows.push([...bomHeaders.map((_,i)=>r[i]??''),cn,hit?'SIM':'NÃO',chave,hit?hit.last.data+' '+hit.last.hora:'',hit?hit.last.autor:'',hit?hit.n:0]);
+  }
+  const warns=[];
+  if(semContrato===rows.length)warns.push(`A Redução BOM não tem coluna de contrato${mapRows?' e o de-para não cobriu essas WOs':''}, então o cruzamento foi só pela WO. Como a maioria das evidências no grupo vem só com o contrato, muitas WOs podem aparecer sem evidência mesmo tendo. Inclua a coluna <b>contrato</b> no BOM ou carregue o de-para WO × Contrato.`);
+  else if(semContrato>0)warns.push(`${fmt(semContrato)} linha(s) sem contrato identificado — cruzadas só pela WO.`);
+  result={ts:Date.now(),headers,rows,sheet:bomSheetName,warns,chat:{contr:idx.contr.size,wos:idx.wos.size,range:idx.range,nMsgs:idx.nMsgs}};
+  const s=summarize(result);
+  const saved=mem.set(K.last,result);
+  const hist=mem.get(K.hist,[]);
+  hist.unshift({ts:result.ts,wos:s.wos,sem:s.sem,linhas:rows.length,range:idx.range,porSap:s.saps.map(x=>[x.sap,x.wos,x.sem])});
+  mem.set(K.hist,hist.slice(0,60));
+  if(!saved)result.warns.push('O resultado ficou grande demais para ser salvo neste navegador; ele some ao fechar a página.');
+  selSap='';
+  showAll();
+  $('upBox').open=false;
+  if($('chkAuto').checked)download();
+}
+
+// ---------- agregações ----------
+function cols(res=result){const H=res.headers;return{
+  H,wo:findCol(H,[isWoCol]),sap:findCol(H,[isSapCol]),tec:findCol(H,[isTecCol]),
+  ev:H.indexOf('Evidência WhatsApp'),qtd:H.indexOf('quantidade'),bom:H.indexOf('quantidadeBOM'),data:H.findIndex(h=>norm(h)==='dataatendimento')};}
+function summarize(res){
+  const c=cols(res);
+  const wo=new Map();// wo -> {sap,tec,ev,linhas}
+  for(const r of res.rows){
+    const k=c.wo>=0?String(r[c.wo]).trim():r.join('|');
+    let o=wo.get(k);
+    if(!o){o={sap:c.sap>=0?String(r[c.sap]).trim()||'—':'—',tec:c.tec>=0?String(r[c.tec]).trim():'',ev:r[c.ev],linhas:0,exc:0};wo.set(k,o);}
+    o.linhas++;if(r[c.ev]==='SIM')o.ev='SIM';
+    if(c.qtd>=0&&c.bom>=0){const q=parseFloat(String(r[c.qtd]).replace(',','.')),b=parseFloat(String(r[c.bom]).replace(',','.'));if(!isNaN(q)&&!isNaN(b)&&q>b)o.exc+=q-b;}
+  }
+  const bySap=new Map();
+  for(const [k,o] of wo){
+    let s=bySap.get(o.sap);if(!s){s={sap:o.sap,wos:0,sem:0,linhasSem:0,exc:0,tecs:new Map()};bySap.set(o.sap,s);}
+    s.wos++;
+    if(o.ev!=='SIM'){s.sem++;s.linhasSem+=o.linhas;s.exc+=o.exc;if(o.tec)s.tecs.set(o.tec,(s.tecs.get(o.tec)||0)+1);}
+  }
+  const saps=[...bySap.values()].sort((a,b)=>b.sem-a.sem||b.wos-a.wos);
+  const semW=[...wo.values()].filter(o=>o.ev!=='SIM');
+  return{wos:wo.size,sem:semW.length,saps,linhasSem:semW.reduce((a,o)=>a+o.linhas,0)};
+}
+
+// ---------- render ----------
+function showWarn(h){$('warns').insertAdjacentHTML('beforeend',`<div class="warn">${h}</div>`);$('out').classList.remove('hide');$('empty').classList.add('hide');}
+function showAll(){
+  if(!result)return;
+  $('out').classList.remove('hide');$('empty').classList.add('hide');
+  const d=new Date(result.ts);
+  $('memo').innerHTML=`Último processamento: <b>${d.toLocaleDateString('pt-BR')} ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</b><br>WhatsApp de ${esc(result.chat.range[0])} a ${esc(result.chat.range[1])} · salvo neste navegador`;
+  $('warns').innerHTML=result.warns.map(w=>`<div class="warn">${w}</div>`).join('');
+  renderDash();fillSapFilter();renderDet();renderHist();
+}
+function sapLabel(s){return sapNames[s]||'';}
+function renderDash(){
+  const s=summarize(result);
+  const cur=selSap?s.saps.filter(x=>x.sap===selSap):s.saps;
+  const wos=cur.reduce((a,x)=>a+x.wos,0),sem=cur.reduce((a,x)=>a+x.sem,0),exc=cur.reduce((a,x)=>a+x.exc,0);
+  $('kpis').innerHTML=`
+    ${selSap?`<div class="kpi" style="display:flex;align-items:center"><span class="chip">SAP ${esc(selSap)} <button onclick="pickSap('')" title="Limpar filtro">×</button></span></div>`:''}
+    <div class="kpi"><b>${fmt(wos)}</b><span>WOs na Redução BOM</span></div>
+    <div class="kpi"><b class="no">${fmt(sem)}</b><span>WOs sem evidência (${pct(sem,wos)})</span></div>
+    <div class="kpi"><b class="ok">${fmt(wos-sem)}</b><span>WOs com evidência</span></div>
+    <div class="kpi"><b>${fmt(Math.round(exc))}</b><span>unidades acima da BOM sem evidência</span></div>
+    <div class="kpi"><b>${fmt(result.chat.contr)}</b><span>contratos citados no grupo</span></div>`;
+  // gráfico
+  const max=Math.max(1,...s.saps.map(x=>x.wos));
+  $('chart').innerHTML=s.saps.map(x=>`
+    <div class="hb ${x.sap===selSap?'sel':''}" data-sap="${esc(x.sap)}" data-tip='${esc(JSON.stringify({sap:x.sap,wos:x.wos,sem:x.sem,exc:Math.round(x.exc)}))}'>
+      <div class="lb">${esc(x.sap)}<small>${esc(sapLabel(x.sap))||'&nbsp;'}</small></div>
+      <div class="trk" style="width:${(x.wos/max*100).toFixed(1)}%"><i style="width:${x.wos?(x.sem/x.wos*100).toFixed(1):0}%"></i></div>
+      <div class="vl"><b>${fmt(x.sem)}</b> / ${fmt(x.wos)}</div>
+    </div>`).join('')+`<div style="font-size:11.5px;color:var(--mut);margin-top:8px;display:flex;gap:14px;flex-wrap:wrap">
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--bar);vertical-align:-1px"></span> sem evidência</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--track);vertical-align:-1px"></span> total de WOs do SAP</span></div>`;
+  document.querySelectorAll('#chart .hb').forEach(el=>{
+    el.onclick=()=>pickSap(el.dataset.sap===selSap?'':el.dataset.sap);
+    el.onmousemove=ev=>{const t=JSON.parse(el.dataset.tip);showTip(ev,`<b>SAP ${esc(t.sap)}</b>${sapLabel(t.sap)?' · '+esc(sapLabel(t.sap)):''}
+      <div><span>WOs</span>${fmt(t.wos)}</div><div><span>Sem evidência</span>${fmt(t.sem)} (${pct(t.sem,t.wos)})</div><div><span>Un. acima da BOM</span>${fmt(t.exc)}</div>`);};
+    el.onmouseleave=hideTip;
+  });
+  // técnicos
+  const tm=new Map();for(const x of cur)for(const [t,n] of x.tecs)tm.set(t,(tm.get(t)||0)+n);
+  const tl=[...tm.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10);const tmax=Math.max(1,...tl.map(x=>x[1]));
+  $('tecSub').textContent=selSap?'SAP '+selSap:'todos os SAPs';
+  $('tecs').innerHTML=tl.length?tl.map(([t,n])=>`<div class="hb" style="cursor:default" onclick="goDet('${esc(t)}')"><div class="lb">${esc(t)}</div><div class="trk" style="background:transparent"><i style="width:${(n/tmax*100).toFixed(1)}%;border-radius:0 4px 4px 0"></i></div><div class="vl"><b>${fmt(n)}</b> WO${n>1?'s':''}</div></div>`).join(''):'<div class="empty" style="padding:20px">Nenhuma WO sem evidência.</div>';
+  // tabela por SAP
+  $('sapTable').innerHTML=`<thead><tr><th>SAP</th><th>Nome</th><th class="n">WOs</th><th class="n">Sem evidência</th><th class="n">% sem</th><th class="n">Linhas de material sem evid.</th><th class="n">Un. acima da BOM</th><th class="n">Técnicos envolvidos</th></tr></thead><tbody>`+
+    s.saps.map(x=>`<tr class="click" onclick="goDetSap('${esc(x.sap)}')"><td><b>${esc(x.sap)}</b></td>
+      <td><span class="sapname" contenteditable="true" data-sap="${esc(x.sap)}" onclick="event.stopPropagation()" title="Clique para dar um nome a este SAP">${esc(sapLabel(x.sap))}</span></td>
+      <td class="n">${fmt(x.wos)}</td><td class="n"><b>${fmt(x.sem)}</b></td><td class="n">${pct(x.sem,x.wos)}</td><td class="n">${fmt(x.linhasSem)}</td><td class="n">${fmt(Math.round(x.exc))}</td><td class="n">${fmt(x.tecs.size)}</td></tr>`).join('')+
+    `<tr><td><b>Total</b></td><td></td><td class="n"><b>${fmt(s.wos)}</b></td><td class="n"><b>${fmt(s.sem)}</b></td><td class="n">${pct(s.sem,s.wos)}</td><td class="n">${fmt(s.linhasSem)}</td><td class="n">${fmt(Math.round(s.saps.reduce((a,x)=>a+x.exc,0)))}</td><td></td></tr></tbody>`;
+  document.querySelectorAll('.sapname').forEach(el=>{
+    el.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();el.blur();}};
+    el.onblur=()=>{const v=el.textContent.trim();const n=mem.get(K.names,{});if(v){n[el.dataset.sap]=v;sapNames[el.dataset.sap]=v;}else{delete n[el.dataset.sap];delete sapNames[el.dataset.sap];}mem.set(K.names,n);renderDash();};
+  });
+}
+function pickSap(s){selSap=s;renderDash();}
+function goDetSap(s){$('fSap').value=s;$('flt').value='NÃO';$('q').value='';tab('det');renderDet();}
+function goDet(t){$('fSap').value=selSap;$('flt').value='NÃO';$('q').value=t;tab('det');renderDet();}
+function showTip(ev,h){const t=$('tip');t.innerHTML=h;t.style.display='block';const w=t.offsetWidth;t.style.left=Math.min(ev.clientX+14,innerWidth-w-8)+'px';t.style.top=(ev.clientY+14)+'px';}
+function hideTip(){$('tip').style.display='none';}
+
+function fillSapFilter(){
+  const c=cols();if(c.sap<0){$('fSap').classList.add('hide');return;}
+  const v=$('fSap').value;const saps=[...new Set(result.rows.map(r=>String(r[c.sap]).trim()))].sort();
+  $('fSap').innerHTML='<option value="">Todos os SAPs</option>'+saps.map(s=>`<option value="${esc(s)}">${esc(s)}${sapLabel(s)?' – '+esc(sapLabel(s)):''}</option>`).join('');$('fSap').value=v;
+}
+function renderDet(){
+  if(!result)return;const c=cols(),H=c.H;
+  const f=$('flt').value,sp=$('fSap').value,q=norm($('q').value);
+  const show=['wo','fornecedor','dataAtendimento','tipoWo','tecnico','material','descricao','quantidade','quantidadeBOM','acao','staAprov','contratoUsado','Evidência WhatsApp','chaveEvidencia','dataEvidencia','autorEvidencia'];
+  let cs=show.map(n=>H.indexOf(n)).filter(i=>i>=0);if(cs.length<6)cs=H.map((_,i)=>i);
+  const rows=result.rows.filter(r=>(!f||r[c.ev]===f)&&(!sp||c.sap<0||String(r[c.sap]).trim()===sp)&&(!q||norm(r.join(' ')).includes(q)));
+  let h='<thead><tr>'+cs.map(i=>`<th class="${['quantidade','quantidadeBOM'].includes(H[i])?'n':''}">${esc(H[i])}</th>`).join('')+'</tr></thead><tbody>';
+  for(const r of rows.slice(0,2000))h+='<tr>'+cs.map(i=>i===c.ev?`<td><span class="tag ${r[i]==='SIM'?'s':'n'}">${r[i]}</span></td>`:`<td class="${['quantidade','quantidadeBOM'].includes(H[i])?'n':''}">${esc(r[i])}</td>`).join('')+'</tr>';
+  if(!rows.length)h+=`<tr><td colspan="${cs.length}" class="empty">Nada encontrado com esses filtros.</td></tr>`;
+  $('tb').innerHTML=h+'</tbody>';
+}
+function renderHist(){
+  const h=mem.get(K.hist,[]);
+  $('histT').innerHTML='<thead><tr><th>Processado em</th><th>WhatsApp até</th><th class="n">WOs</th><th class="n">Sem evidência</th><th class="n">% sem</th><th>Por SAP (sem / total)</th></tr></thead><tbody>'+
+    (h.length?h.map(x=>{const d=new Date(x.ts);return `<tr><td>${d.toLocaleDateString('pt-BR')} ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</td><td>${esc(x.range?.[1]||'')}</td><td class="n">${fmt(x.wos)}</td><td class="n"><b>${fmt(x.sem)}</b></td><td class="n">${pct(x.sem,x.wos)}</td><td style="white-space:normal;color:var(--tx2)">${(x.porSap||[]).map(p=>`${esc(p[0])}: ${p[2]}/${p[1]}`).join(' · ')}</td></tr>`;}).join(''):'<tr><td colspan="6" class="empty">Sem histórico ainda.</td></tr>')+'</tbody>';
+}
+function tab(t){document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));['dash','det','hist'].forEach(x=>$('t-'+x).classList.toggle('hide',x!==t));}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>tab(b.dataset.t));
+$('flt').onchange=renderDet;$('fSap').onchange=renderDet;$('q').oninput=renderDet;
+$('btnDl').onclick=download;
+$('btnClear').onclick=()=>{if(!confirmClear())return;Object.values(K).forEach(mem.del);location.reload();};
+function confirmClear(){const b=$('btnClear');if(b.dataset.arm){return true;}b.dataset.arm=1;b.textContent='Clique de novo para confirmar';setTimeout(()=>{delete b.dataset.arm;b.textContent='Apagar dados salvos neste navegador';},4000);return false;}
+
+// ---------- Excel ----------
+function download(){
+  if(!result)return;
+  const H=result.headers,c=cols();
+  const numCols=new Set(['quantidade','quantidadeBOM','novaQuantidade','diasDesdeWO','qtdMencoes']);
+  const conv=r=>r.map((v,i)=>numCols.has(H[i])&&v!==''&&!isNaN(Number(String(v).replace(',','.')))?Number(String(v).replace(',','.')):v);
+  const mk=rows=>{const ws=XLSX.utils.aoa_to_sheet([H,...rows.map(conv)]);ws['!cols']=H.map(h=>({wch:Math.min(Math.max(String(h).length+2,10),45)}));ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:rows.length,c:H.length-1}})};return ws;};
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,mk(result.rows),(result.sheet||'Resultado').slice(0,31));
+  XLSX.utils.book_append_sheet(wb,mk(result.rows.filter(r=>r[c.ev]==='NÃO')),'Sem evidência');
+  const s=summarize(result);
+  const res=[['SAP','Nome','WOs','WOs sem evidência','% sem evidência','Linhas sem evidência','Un. acima da BOM sem evidência'],
+    ...s.saps.map(x=>[x.sap,sapLabel(x.sap),x.wos,x.sem,x.wos?x.sem/x.wos:0,x.linhasSem,Math.round(x.exc)]),
+    ['Total','',s.wos,s.sem,s.wos?s.sem/s.wos:0,s.linhasSem,Math.round(s.saps.reduce((a,x)=>a+x.exc,0))]];
+  const ws3=XLSX.utils.aoa_to_sheet(res);ws3['!cols']=[{wch:10},{wch:22},{wch:8},{wch:18},{wch:16},{wch:20},{wch:28}];
+  for(let i=2;i<=res.length;i++){const a='E'+i;if(ws3[a])ws3[a].z='0%';}
+  XLSX.utils.book_append_sheet(wb,ws3,'Resumo por SAP');
+  const d=new Date(result.ts),p=n=>String(n).padStart(2,'0');
+  XLSX.writeFile(wb,`Contratos-sem-evidencias_${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.xlsx`);
+}
+
+// ---------- restaurar memória ao abrir ----------
+(function boot(){
+  const m=mem.get(K.map,null);if(m){mapRows=m;$('sMap').className='st ok';$('sMap').textContent=`✓ de-para salvo: ${fmt(Object.keys(m).length)} WOs (carregue outro para somar)`;}
+  const last=mem.get(K.last,null);
+  if(last&&last.rows){result=last;showAll();$('upBox').open=false;}
+})();
+</script>
+</body>
+</html>
